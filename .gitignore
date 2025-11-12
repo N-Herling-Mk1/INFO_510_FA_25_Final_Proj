@@ -1,0 +1,54 @@
+# ============================
+# Nathan Herling - INFO 510 Final Project
+# Python + Micromamba + TensorFlow
+# ============================
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual / Micromamba environments
+.venv/
+.mm/
+env/
+*.conda/
+*.mamba/
+*.env/
+
+# VS Code and editor settings
+.vscode/
+*.code-workspace
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Data / outputs
+_data/temp/
+*.log
+*.csv
+*.tsv
+*.ods
+*.xlsx
+*.h5
+*.npy
+*.npz
+*.wav
+*.mp3
+*.mp4
+*.gif
+*.png
+*.jpg
+*.jpeg
+
+# Model artifacts
+checkpoints/
+models/
+runs/
+outputs/
+logs/
+
+# OS / system files
+.DS_Store
+Thumbs.db
+desktop.ini
