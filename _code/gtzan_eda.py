@@ -2,161 +2,231 @@
 # -*- coding: utf-8 -*-
 """
 GTZAN EDA & Split Script
-Root directory: INFO_510_FA_25_Final_Proj
+- Auto-detects repo root from this file location: <repo>/_code/gtzan_eda.py
+- Counts audio & spectrograms, loads 3s/30s feature CSVs, basic QC, and stratified splits.
 """
 
-import os
+from __future__ import annotations
+import random
 from pathlib import Path
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 from collections import Counter
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.model_selection import StratifiedShuffleSplit
 
+# Optional dependency
 try:
-    import librosa
-except ImportError:
+    import librosa  # type: ignore
+except Exception:
     librosa = None
 
 # ---------------- CONFIG ---------------- #
-ROOT_DIR = Path(r"INFO_510_FA_25_Final_Proj")
-DATA_DIR = ROOT_DIR / "_data" / "gtzan_kaggle" / "Data"
+# This file lives in <repo>/_code/gtzan_eda.py
+THIS_FILE = Path(__file__).resolve()
+ROOT_DIR  = THIS_FILE.parents[1]                     # <repo>
+DATA_DIR  = ROOT_DIR / "_data" / "gtzan_kaggle" / "Data"
+OUTDIR    = ROOT_DIR / "_eda_outputs"
 
-AUDIO_DIR = DATA_DIR / "genres_original"
+AUDIO_DIR     = DATA_DIR / "genres_original"
 IMG_COLOR_DIR = DATA_DIR / "images_original"
-IMG_GRAY_DIR = DATA_DIR / "images_grey_scale"
+IMG_GRAY_DIR  = DATA_DIR / "images_grey_scale"
 
 FEATURES_30 = DATA_DIR / "features_30_sec.csv"
-FEATURES_3 = DATA_DIR / "features_3_sec.csv"
-
-OUTDIR = ROOT_DIR / "_eda_outputs"
-OUTDIR.mkdir(exist_ok=True, parents=True)
+FEATURES_3  = DATA_DIR / "features_3_sec.csv"
 
 RANDOM_SEED = 42
+np.random.seed(RANDOM_SEED)
+random.seed(RANDOM_SEED)
+
+# Ensure output dir
+OUTDIR.mkdir(parents=True, exist_ok=True)
 
 
 # ---------------- HELPERS ---------------- #
-def count_files_by_genre(base_path: Path, exts=(".wav", ".png", ".jpg", ".jpeg")):
-    counts = Counter()
-    for ext in exts:
-        for f in base_path.rglob(f"*{ext}"):
-            genre = f.parent.name.lower()
-            counts[genre] += 1
-    return dict(sorted(counts.items()))
-
-
-def report_balance(counts: dict, title: str, outpath: Path):
-    plt.bar(counts.keys(), counts.values())
+def _barplot(counts: dict[str, int], title: str, outpath: Path) -> None:
+    if not counts:
+        print(f"⚠️  Skipping plot '{title}' — no data.")
+        return
+    plt.figure(figsize=(9.5, 4.5))
+    keys = list(counts.keys())
+    vals = [counts[k] for k in keys]
+    plt.bar(keys, vals)
     plt.title(title)
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=35, ha="right")
     plt.ylabel("Count")
     plt.tight_layout()
     plt.savefig(outpath, dpi=150)
     plt.close()
 
 
-def read_features(path: Path) -> pd.DataFrame:
+def _count_leaf_dirs_by_ext(base: Path, exts: tuple[str, ...]) -> dict[str, int]:
+    """
+    Counts files per immediate leaf directory (genre) by extension.
+    Example: <base>/<genre>/*.ext
+    """
+    if not base.exists():
+        return {}
+    counts = {}
+    for d in sorted(p for p in base.iterdir() if p.is_dir()):
+        n = 0
+        for ext in exts:
+            n += sum(1 for _ in d.glob(f"*{ext}"))
+        counts[d.name.lower()] = n
+    return counts
+
+
+def _safe_read_csv(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(f"Missing CSV: {path}")
     df = pd.read_csv(path)
-    df.columns = [c.lower() for c in df.columns]
+    # normalize columns
+    df.columns = [c.strip().lower() for c in df.columns]
+    # filename / file -> base_id
     if "filename" in df.columns:
-        df["base_id"] = df["filename"].apply(lambda x: Path(x).stem.split("-")[0])
+        src = "filename"
     elif "file" in df.columns:
-        df["base_id"] = df["file"].apply(lambda x: Path(x).stem.split("-")[0])
-    if "label" in df.columns:
-        df["genre"] = df["label"].str.lower()
-    elif "genre" not in df.columns:
-        df["genre"] = df["base_id"].apply(lambda s: s.split(".")[0])
+        src = "file"
+    else:
+        src = None
+
+    if src:
+        df["base_id"] = (
+            df[src]
+            .astype(str)
+            .apply(lambda x: Path(x).stem.split("-")[0])
+        )
+
+    # establish 'genre'
+    if "label" in df.columns and "genre" not in df.columns:
+        df["genre"] = df["label"].astype(str).str.lower()
+    if "genre" not in df.columns:
+        # fallback: infer from base_id if present
+        if "base_id" in df.columns:
+            df["genre"] = df["base_id"].astype(str).apply(lambda s: s.split(".")[0].lower())
+        else:
+            # leave missing; caller can handle
+            df["genre"] = pd.NA
     return df
 
 
-def probe_durations(n=10):
+def _probe_durations(audio_root: Path, n: int = 10):
     if librosa is None:
-        print("librosa not installed; skipping duration probe.")
+        print("ℹ️  librosa not installed; skipping duration probe.")
         return None
-    import random
-    files = list(AUDIO_DIR.rglob("*.wav"))
+    files = list(audio_root.rglob("*.wav"))
+    if not files:
+        print("ℹ️  No .wav files found for duration probe.")
+        return None
     sample = random.sample(files, min(n, len(files)))
     durations = []
     for f in sample:
         try:
             y, sr = librosa.load(f, sr=None)
-            durations.append(len(y) / sr)
+            durations.append(len(y) / float(sr))
         except Exception:
             pass
     if durations:
-        return np.mean(durations), np.std(durations)
+        return float(np.mean(durations)), float(np.std(durations))
     return None
 
 
 # ---------------- MAIN EDA ---------------- #
-def run_eda():
-    print(f"📂 Root: {ROOT_DIR}")
-    print(f"📊 Output: {OUTDIR}\n")
+def run_eda() -> None:
+    # Sanity banner
+    print(f"📂 ROOT: {ROOT_DIR}")
+    print(f"📁 DATA_DIR: {DATA_DIR}  (exists={DATA_DIR.exists()})")
+    print(f"📄 30s CSV: {FEATURES_30}  (exists={FEATURES_30.exists()})")
+    print(f"📄 3s  CSV: {FEATURES_3}   (exists={FEATURES_3.exists()})")
+    print(f"📦 OUTDIR: {OUTDIR}\n")
 
     # --- Inventory --- #
     print("🔍 Counting files by genre...")
-    audio_counts = count_files_by_genre(AUDIO_DIR, (".wav",))
-    color_counts = count_files_by_genre(IMG_COLOR_DIR)
-    gray_counts = count_files_by_genre(IMG_GRAY_DIR)
+    audio_counts = _count_leaf_dirs_by_ext(AUDIO_DIR, (".wav",))
+    color_counts = _count_leaf_dirs_by_ext(IMG_COLOR_DIR, (".png", ".jpg", ".jpeg"))
+    gray_counts  = _count_leaf_dirs_by_ext(IMG_GRAY_DIR,  (".png", ".jpg", ".jpeg"))
 
     print(f"Audio counts: {audio_counts}")
     print(f"Color spectrogram counts: {color_counts}")
-    print(f"Gray spectrogram counts: {gray_counts}")
+    print(f"Gray  spectrogram counts: {gray_counts}")
 
-    report_balance(audio_counts, "Audio Files per Genre", OUTDIR / "audio_balance.png")
-    report_balance(color_counts, "Color Spectrograms per Genre", OUTDIR / "color_balance.png")
-    report_balance(gray_counts, "Gray Spectrograms per Genre", OUTDIR / "gray_balance.png")
+    _barplot(audio_counts, "Audio Files per Genre", OUTDIR / "audio_balance.png")
+    _barplot(color_counts, "Color Spectrograms per Genre", OUTDIR / "color_balance.png")
+    _barplot(gray_counts,  "Gray Spectrograms per Genre",  OUTDIR / "gray_balance.png")
 
     # --- Feature CSVs --- #
     print("\n📄 Loading feature files...")
-    df30 = read_features(FEATURES_30)
-    df3 = read_features(FEATURES_3)
+    try:
+        df30 = _safe_read_csv(FEATURES_30)
+        print(f"features_30_sec: {df30.shape}")
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        df30 = pd.DataFrame()
 
-    print(f"features_30_sec: {df30.shape}")
-    print(f"features_3_sec: {df3.shape}")
+    try:
+        df3 = _safe_read_csv(FEATURES_3)
+        print(f"features_3_sec:  {df3.shape}")
+    except FileNotFoundError as e:
+        print(f"❌ {e}")
+        df3 = pd.DataFrame()
 
-    # Missing & duplicates
-    for name, df in {"30s": df30, "3s": df3}.items():
-        print(f"\n[{name}] Missing values: {df.isna().sum().sum()}")
-        print(f"[{name}] Duplicated rows: {df.duplicated().sum()}")
+    # Missing & duplicates (only if loaded)
+    for name, df in (("30s", df30), ("3s", df3)):
+        if df.empty:
+            continue
+        print(f"\n[{name}] Missing values (total): {int(df.isna().sum().sum())}")
+        print(f"[{name}] Duplicated rows: {int(df.duplicated().sum())}")
 
-    # --- Class balance --- #
-    report_balance(df30["genre"].value_counts().to_dict(),
-                   "30s Feature Genres", OUTDIR / "features_30_balance.png")
-    report_balance(df3["genre"].value_counts().to_dict(),
-                   "3s Feature Genres", OUTDIR / "features_3_balance.png")
+        # class balance plots
+        if "genre" in df.columns and df["genre"].notna().any():
+            balance = df["genre"].astype(str).str.lower().value_counts().to_dict()
+            _barplot(balance, f"{name} Feature Genres", OUTDIR / f"features_{name}_balance.png")
+        else:
+            print(f"[{name}] ⚠️  'genre' column missing or empty; skipping balance plot.")
 
-    # --- Alignment Check --- #
-    base30_audio = {Path(f).stem.split(".")[0] for f in AUDIO_DIR.rglob("*.wav")}
-    base30_csv = set(df30["base_id"].unique())
-    missing_in_csv = base30_audio - base30_csv
-    print(f"\n⚖️ Missing feature rows for {len(missing_in_csv)} audio tracks.")
+    # --- Alignment Check (30s vs audio) --- #
+    if not df30.empty and "base_id" in df30.columns:
+        audio_bases = {p.stem.split(".")[0] for p in AUDIO_DIR.rglob("*.wav")}
+        csv_bases   = set(df30["base_id"].dropna().unique())
+        missing_in_csv = audio_bases - csv_bases
+        print(f"\n⚖️  Missing feature rows for {len(missing_in_csv)} audio tracks.")
+    else:
+        print("\n⚖️  Skipping alignment check (30s features unavailable).")
 
     # --- Duration Probe --- #
-    probe = probe_durations(n=10)
+    probe = _probe_durations(AUDIO_DIR, n=10)
     if probe:
-        print(f"⏱️ Avg duration: {probe[0]:.2f}s ± {probe[1]:.2f}")
+        mu, sig = probe
+        print(f"⏱️  Avg duration: {mu:.2f}s ± {sig:.2f}")
 
     # --- Stratified Splits (30s level) --- #
     print("\n🧩 Creating train/val/test splits...")
-    groups = df30[["base_id", "genre"]].drop_duplicates()
-    X, y = groups["base_id"], groups["genre"]
+    if not df30.empty and {"base_id", "genre"}.issubset(df30.columns):
+        groups = df30[["base_id", "genre"]].dropna().drop_duplicates()
+        X, y = groups["base_id"].astype(str).values, groups["genre"].astype(str).values
 
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=0.15, random_state=RANDOM_SEED)
-    for train_idx, test_idx in sss.split(X, y):
-        train_df = groups.iloc[train_idx]
-        test_df = groups.iloc[test_idx]
+        # test = 15%
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=0.15, random_state=RANDOM_SEED)
+        (train_idx, test_idx), = sss.split(X, y)
+        train_df = groups.iloc[train_idx].reset_index(drop=True)
+        test_df  = groups.iloc[test_idx ].reset_index(drop=True)
 
-    sss2 = StratifiedShuffleSplit(n_splits=1, test_size=0.176, random_state=RANDOM_SEED)
-    for tr_idx, val_idx in sss2.split(train_df["base_id"], train_df["genre"]):
-        train_final = train_df.iloc[tr_idx]
-        val_final = train_df.iloc[val_idx]
+        # val = 15% of total -> 0.176 of remaining (~15/85)
+        sss2 = StratifiedShuffleSplit(n_splits=1, test_size=0.176, random_state=RANDOM_SEED)
+        (tr_idx, val_idx), = sss2.split(train_df["base_id"], train_df["genre"])
+        train_final = train_df.iloc[tr_idx].reset_index(drop=True)
+        val_final   = train_df.iloc[val_idx].reset_index(drop=True)
 
-    train_final.to_csv(OUTDIR / "train_split.csv", index=False)
-    val_final.to_csv(OUTDIR / "val_split.csv", index=False)
-    test_df.to_csv(OUTDIR / "test_split.csv", index=False)
-
-    print("✅ Saved splits under", OUTDIR)
+        train_final.to_csv(OUTDIR / "train_split.csv", index=False)
+        val_final.to_csv(OUTDIR / "val_split.csv", index=False)
+        test_df.to_csv(OUTDIR / "test_split.csv", index=False)
+        print(f"✅ Saved splits under {OUTDIR}")
+        print(f"   - train_split.csv: {len(train_final)} rows")
+        print(f"   - val_split.csv:   {len(val_final)} rows")
+        print(f"   - test_split.csv:  {len(test_df)} rows")
+    else:
+        print("⚠️  Skipping splits — need non-empty 30s features with ['base_id','genre'].")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,5 @@
+best_epoch:        4
+best_val_accuracy: 0.31333333253860474
+best_val_loss:     1.8716609477996826
+final_val_accuracy:0.273333340883255
+final_val_loss:    2.0017035007476807

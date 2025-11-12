@@ -1,0 +1,88 @@
+{
+  "project": {
+    "name": "B.E.A.R. D.O.W.N.",
+    "question": "Q1 \u2014 Bayesian Deep Neural Network (CNN backbone + variational Bayesian head)",
+    "target_accuracy": 0.8,
+    "max_gen_gap": 0.05,
+    "description": "CNN backbone extracts features from GTZAN spectrograms. Bayesian classifier head models epistemic + aleatoric uncertainty using variational layers or Monte Carlo dropout.\n",
+    "stretch_goal": "Active learning using predictive uncertainty (Q3)."
+  },
+  "data": {
+    "root_dir": "INFO_510_FA_25_Final_Proj",
+    "img_root": "_data/gtzan_kaggle/Data/images_grey_scale",
+    "channels": 1,
+    "img_size": [
+      224,
+      224
+    ],
+    "classes": [
+      "blues",
+      "classical",
+      "country",
+      "disco",
+      "hiphop",
+      "jazz",
+      "metal",
+      "pop",
+      "reggae",
+      "rock"
+    ],
+    "seed": 42
+  },
+  "model": {
+    "backbone": "custom_small",
+    "dropout_backbone": 0.1,
+    "dense_units": 128
+  },
+  "bayesian": {
+    "enabled": true,
+    "head_type": "flipout",
+    "prefer_tfp": true,
+    "prior_scale": 3.0,
+    "posterior_scale_init": 0.03,
+    "kl_weight_strategy": "fixed",
+    "kl_weight_fixed": 0.0001,
+    "kl_anneal": {
+      "enabled": true,
+      "warmup_epochs": 5
+    },
+    "prior_notes": "Priors define the distribution over weights p(w) = Normal(0, \u03c3\u00b2). Posterior q(w|\u03b8) learns mean and variance via variational inference. KL divergence between q and p regularizes overfitting.\n",
+    "mc_dropout_rate": null
+  },
+  "train": {
+    "batch_size": 16,
+    "epochs": 8,
+    "optimizer": "adamw",
+    "learning_rate": 6.68360469187294e-05,
+    "weight_decay": 1e-05,
+    "early_stopping": {
+      "monitor": "val_accuracy",
+      "patience": 4,
+      "restore_best": true
+    },
+    "reduce_lr_on_plateau": {
+      "monitor": "val_accuracy",
+      "factor": 0.5,
+      "patience": 2,
+      "min_lr": 1e-06
+    },
+    "checkpoints": {
+      "dir": "_eda_outputs",
+      "filename_best": "bayescnn_best.keras",
+      "filename_final": "bayescnn_q1_final.keras"
+    }
+  },
+  "uncertainty": {
+    "mc_passes": 20,
+    "metrics": [
+      "entropy",
+      "mutual_information"
+    ],
+    "description": "Predictive uncertainty is estimated by averaging outputs from multiple stochastic forward passes (T=mc_passes). Metrics: predictive entropy (total uncertainty)\n          mutual information (epistemic uncertainty).\n"
+  },
+  "logging": {
+    "run_name": "gtzan_bayes_q1_model",
+    "verbose": 1,
+    "tf_cpp_min_log_level": 2
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "trial_id": 3,
+  "run_dir": "C:\\Users\\natha\\OneDrive\\Desktop\\0_Fall_25\\0_INFO_510\\INFO_510_FA_25_Final_Proj\\_eda_outputs\\sweeps\\20251112_024954_bayescnn_q1\\trial_003_20251112_025138",
+  "best_epoch": 6,
+  "best_val_accuracy": 0.2133333384990692,
+  "best_val_loss": 2.783468723297119,
+  "n_train": 699,
+  "n_val": 150,
+  "kl_weight_effective": 0.0001,
+  "used_tfp": true,
+  "train.optimizer": "adamw",
+  "train.learning_rate": 6.68360469187294e-05,
+  "train.weight_decay": 1e-05,
+  "train.batch_size": 16,
+  "model.dropout_backbone": 0.1,
+  "model.dense_units": 128,
+  "bayesian.head_type": "flipout",
+  "bayesian.prior_scale": 3.0,
+  "bayesian.posterior_scale_init": 0.03,
+  "bayesian.kl_weight_strategy": "fixed",
+  "bayesian.kl_weight_fixed": 0.0001,
+  "bayesian.mc_dropout_rate": 0.1
+}

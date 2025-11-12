@@ -1,0 +1,62 @@
+Model: "model2_fusion"
+__________________________________________________________________________________________________
+ Layer (type)                Output Shape                 Param #   Connected to                  
+==================================================================================================
+ image_input (InputLayer)    [(None, 224, 224, 1)]        0         []                            
+                                                                                                  
+ conv2d_15 (Conv2D)          (None, 224, 224, 32)         320       ['image_input[0][0]']         
+                                                                                                  
+ batch_normalization_15 (Ba  (None, 224, 224, 32)         128       ['conv2d_15[0][0]']           
+ tchNormalization)                                                                                
+                                                                                                  
+ max_pooling2d_15 (MaxPooli  (None, 112, 112, 32)         0         ['batch_normalization_15[0][0]
+ ng2D)                                                              ']                            
+                                                                                                  
+ conv2d_16 (Conv2D)          (None, 112, 112, 64)         18496     ['max_pooling2d_15[0][0]']    
+                                                                                                  
+ batch_normalization_16 (Ba  (None, 112, 112, 64)         256       ['conv2d_16[0][0]']           
+ tchNormalization)                                                                                
+                                                                                                  
+ max_pooling2d_16 (MaxPooli  (None, 56, 56, 64)           0         ['batch_normalization_16[0][0]
+ ng2D)                                                              ']                            
+                                                                                                  
+ conv2d_17 (Conv2D)          (None, 56, 56, 128)          73856     ['max_pooling2d_16[0][0]']    
+                                                                                                  
+ batch_normalization_17 (Ba  (None, 56, 56, 128)          512       ['conv2d_17[0][0]']           
+ tchNormalization)                                                                                
+                                                                                                  
+ max_pooling2d_17 (MaxPooli  (None, 28, 28, 128)          0         ['batch_normalization_17[0][0]
+ ng2D)                                                              ']                            
+                                                                                                  
+ tabular_input (InputLayer)  [(None, 57)]                 0         []                            
+                                                                                                  
+ global_average_pooling2d_5  (None, 128)                  0         ['max_pooling2d_17[0][0]']    
+  (GlobalAveragePooling2D)                                                                        
+                                                                                                  
+ tab_standardize (Lambda)    (None, 57)                   0         ['tabular_input[0][0]']       
+                                                                                                  
+ dense_15 (Dense)            (None, 384)                  49536     ['global_average_pooling2d_5[0
+                                                                    ][0]']                        
+                                                                                                  
+ dense_16 (Dense)            (None, 64)                   3712      ['tab_standardize[0][0]']     
+                                                                                                  
+ dropout_15 (Dropout)        (None, 384)                  0         ['dense_15[0][0]']            
+                                                                                                  
+ dropout_16 (Dropout)        (None, 64)                   0         ['dense_16[0][0]']            
+                                                                                                  
+ concatenate_5 (Concatenate  (None, 448)                  0         ['dropout_15[0][0]',          
+ )                                                                   'dropout_16[0][0]']          
+                                                                                                  
+ dense_17 (Dense)            (None, 384)                  172416    ['concatenate_5[0][0]']       
+                                                                                                  
+ dropout_17 (Dropout)        (None, 384)                  0         ['dense_17[0][0]']            
+                                                                                                  
+ det_head (Dense)            (None, 10)                   3850      ['dropout_17[0][0]']          
+                                                                                                  
+ softmax (Activation)        (None, 10)                   0         ['det_head[0][0]']            
+                                                                                                  
+==================================================================================================
+Total params: 323082 (1.23 MB)
+Trainable params: 322634 (1.23 MB)
+Non-trainable params: 448 (1.75 KB)
+__________________________________________________________________________________________________

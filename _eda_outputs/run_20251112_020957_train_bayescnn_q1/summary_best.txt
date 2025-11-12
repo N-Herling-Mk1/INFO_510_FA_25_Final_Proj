@@ -1,0 +1,7 @@
+Run folder: C:\Users\natha\OneDrive\Desktop\0_Fall_25\0_INFO_510\INFO_510_FA_25_Final_Proj\_eda_outputs\run_20251112_020957_train_bayescnn_q1
+Best Epoch: 13
+Best Validation Accuracy: 0.2867
+Validation Loss at Best: 8.6497
+Best Model Path: C:\Users\natha\OneDrive\Desktop\0_Fall_25\0_INFO_510\INFO_510_FA_25_Final_Proj\_eda_outputs\run_20251112_020957_train_bayescnn_q1\bayescnn_best.keras
+Final Model Path: C:\Users\natha\OneDrive\Desktop\0_Fall_25\0_INFO_510\INFO_510_FA_25_Final_Proj\_eda_outputs\run_20251112_020957_train_bayescnn_q1\bayescnn_q1_final.keras
+History CSV: C:\Users\natha\OneDrive\Desktop\0_Fall_25\0_INFO_510\INFO_510_FA_25_Final_Proj\_eda_outputs\run_20251112_020957_train_bayescnn_q1\train_history_q1.csv

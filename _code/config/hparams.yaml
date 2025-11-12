@@ -1,0 +1,144 @@
+# ==== Project meta (from proposal Q1) ====
+project:
+  name: "B.E.A.R. D.O.W.N."
+  question: "Q1 — Bayesian Deep Neural Network (CNN backbone + variational Bayesian head)"
+  target_accuracy: 0.80          # goal ≥80% genre accuracy
+  max_gen_gap: 0.05              # generalization gap ≤5%
+  description: >
+    CNN backbone extracts features from GTZAN spectrograms.
+    Bayesian classifier head models epistemic + aleatoric uncertainty
+    using variational layers or Monte Carlo dropout.
+  stretch_goal: "Active learning using predictive uncertainty (Q3)."
+
+# ==== Data ====
+data:
+  root_dir: "INFO_510_FA_25_Final_Proj"
+  img_root: "_data/gtzan_kaggle/Data/images_grey_scale"
+  channels: 1
+  img_size: [224, 224]
+  classes: ["blues","classical","country","disco","hiphop","jazz","metal","pop","reggae","rock"]
+  seed: 42
+
+  # --- Shared/default splits; used by all models ---
+  splits:
+    train_csv: "_eda_outputs/train_split.csv"
+    val_csv:   "_eda_outputs/val_split.csv"
+
+  # --- Model 2 (tabular features, 30-second clips) ---
+  model2:
+    # Path to the 30s feature CSV (relative to repo root)
+    features_csv: "_data/gtzan_kaggle/Data/features_30_sec.csv"
+
+    # Key column that identifies a track/clip in the CSV (we'll auto-fallback)
+    feature_key: "filename"
+    feature_key_candidates: ["filename", "track", "id", "file", "base_id"]
+
+    # Numeric feature columns to ingest for the tabular branch (edit to match CSV headers)
+    numeric_features:
+      - spectral_centroid
+      - spectral_rolloff
+      - zero_crossing_rate
+      - chroma_stft_mean
+      - mfcc_1
+      - mfcc_2
+      - mfcc_3
+      - mfcc_4
+      - mfcc_5
+
+    # Feature engineering / normalization for tabular inputs
+    features:
+      drop_columns: []            # e.g., ["filename"]
+      scaler: "standard"          # "standard" | "minmax" | "none"
+      impute: "mean"              # "mean" | "median" | "none"
+
+# ==== Model Backbone ====
+model:
+  backbone: "custom_small"        # CNN backbone
+  dropout_backbone: 0.25
+  dense_units: 256
+
+# ==== Model 2 (image + tabular fusion) ====
+model2:
+  # Tabular branch (MLP over engineered features)
+  tab_dense: [128]                # you can deepen: [128, 64], etc.
+  tab_dropout: 0.10
+  tab_batchnorm: true
+
+  # Fusion strategy
+  fusion: "concat"                # "concat" | "gated" | "sum"
+  fusion_dense: 256               # dense after fusion
+  fusion_dropout: 0.10
+
+  # Which inputs are active (lets you ablate)
+  use_images: true
+  use_tabular: true
+
+# ==== Bayesian Head & Hyperparameters ====
+bayesian:
+  enabled: true
+  head_type: "flipout"            # flipout|reparameterization|mc_dropout|det
+  prefer_tfp: true                # use tfp.DenseFlipout when available
+
+  # Priors / posteriors
+  prior_scale: 1.0                # σ for Normal(0, σ²) prior on weights/biases
+  posterior_scale_init: 0.1       # initial σ for posterior q(w)
+
+  # KL weighting
+  kl_weight_strategy: "1_over_N"  # dataset-size scaling or fixed scalar
+  kl_weight_fixed: 1.0e-3         # used if fixed
+  kl_anneal:
+    enabled: true
+    warmup_epochs: 5              # ramp KL weight from 10%→100%
+
+  prior_notes: >
+    Priors define the distribution over weights p(w) = Normal(0, σ²).
+    Posterior q(w|θ) learns mean and variance via variational inference.
+    KL divergence between q and p regularizes overfitting.
+
+  # MC-Dropout head support (if head_type == "mc_dropout")
+  mc_dropout_rate: 0.20
+
+# ==== Training ====
+train:
+  batch_size: 32
+  epochs: 20
+  optimizer: "adamw"
+  learning_rate: 3.0e-4
+  weight_decay: 1.0e-4
+  early_stopping:
+    monitor: "val_accuracy"
+    patience: 4
+    restore_best: true
+  reduce_lr_on_plateau:
+    monitor: "val_accuracy"
+    factor: 0.5
+    patience: 2
+    min_lr: 1.0e-6
+
+  # Model 1 checkpoints (Bayes-CNN on spectrograms)
+  checkpoints:
+    dir: "_eda_outputs"
+    filename_best: "bayescnn_best.keras"
+    filename_final: "bayescnn_q1_final.keras"
+
+  # Model 2 checkpoints (fusion)
+  checkpoints_model2:
+    dir: "_eda_outputs"
+    filename_best:  "model2_best.keras"
+    filename_final: "model2_final.keras"
+
+# ==== Uncertainty Evaluation ====
+uncertainty:
+  mc_passes: 20                    # Monte Carlo samples
+  metrics: ["entropy","mutual_information"]
+  description: >
+    Predictive uncertainty is estimated by averaging outputs from
+    multiple stochastic forward passes (T=mc_passes).
+    Metrics: predictive entropy (total uncertainty)
+             mutual information (epistemic uncertainty).
+
+# ==== Logging ====
+logging:
+  run_name: "gtzan_bayes_q1_model"
+  verbose: 1
+  tf_cpp_min_log_level: 2

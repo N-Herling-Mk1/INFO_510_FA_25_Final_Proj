@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-11-12T02:57:46",
+  "model_tag": "bayescnn_q1",
+  "repo_root": "C:\\Users\\natha\\OneDrive\\Desktop\\0_Fall_25\\0_INFO_510\\INFO_510_FA_25_Final_Proj",
+  "img_root": "_data/gtzan_kaggle/Data/images_grey_scale",
+  "classes": [
+    "blues",
+    "classical",
+    "country",
+    "disco",
+    "hiphop",
+    "jazz",
+    "metal",
+    "pop",
+    "reggae",
+    "rock"
+  ],
+  "img_size": [
+    224,
+    224
+  ],
+  "channels": 1,
+  "n_train": 699,
+  "n_val": 150,
+  "optimizer": "adam",
+  "learning_rate": 0.0002348500064860973,
+  "weight_decay": 1e-05,
+  "kl_weight_effective": 0.001430615164520744,
+  "used_tfp": true,
+  "python": "3.11.14",
+  "tensorflow": "2.15.0",
+  "git_commit": "ac01961a30894983f928506b1ba7bea8d623e05a",
+  "seed": 42,
+  "best": {
+    "epoch": 7,
+    "val_accuracy": 0.2866666615009308,
+    "val_loss": 13.20163345336914
+  },
+  "final": {
+    "val_accuracy": 0.25999999046325684,
+    "val_loss": 13.176841735839844
+  },
+  "hyperparams": {
+    "train.optimizer": "adam",
+    "train.learning_rate": 0.0002348500064860973,
+    "train.weight_decay": 1e-05,
+    "model.dropout_backbone": 0.4,
+    "model.dense_units": 256,
+    "train.batch_size": 32,
+    "bayesian.head_type": "flipout",
+    "bayesian.prior_scale": 1.0,
+    "bayesian.posterior_scale_init": 0.03,
+    "bayesian.kl_weight_strategy": "1_over_N",
+    "bayesian.kl_weight_fixed": null,
+    "bayesian.mc_dropout_rate": 0.2
+  }
+}

@@ -1,0 +1,47 @@
+Model: "bayescnn_q1"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input (InputLayer)          [(None, 224, 224, 1)]     0         
+                                                                 
+ conv2d (Conv2D)             (None, 224, 224, 32)      320       
+                                                                 
+ batch_normalization (Batch  (None, 224, 224, 32)      128       
+ Normalization)                                                  
+                                                                 
+ max_pooling2d (MaxPooling2  (None, 112, 112, 32)      0         
+ D)                                                              
+                                                                 
+ conv2d_1 (Conv2D)           (None, 112, 112, 64)      18496     
+                                                                 
+ batch_normalization_1 (Bat  (None, 112, 112, 64)      256       
+ chNormalization)                                                
+                                                                 
+ max_pooling2d_1 (MaxPoolin  (None, 56, 56, 64)        0         
+ g2D)                                                            
+                                                                 
+ conv2d_2 (Conv2D)           (None, 56, 56, 128)       73856     
+                                                                 
+ batch_normalization_2 (Bat  (None, 56, 56, 128)       512       
+ chNormalization)                                                
+                                                                 
+ max_pooling2d_2 (MaxPoolin  (None, 28, 28, 128)       0         
+ g2D)                                                            
+                                                                 
+ global_average_pooling2d (  (None, 128)               0         
+ GlobalAveragePooling2D)                                         
+                                                                 
+ dense (Dense)               (None, 256)               33024     
+                                                                 
+ dropout (Dropout)           (None, 256)               0         
+                                                                 
+ bayes_head_flipout (DenseF  (None, 10)                5140      
+ lipout)                                                         
+                                                                 
+ softmax (Activation)        (None, 10)                0         
+                                                                 
+=================================================================
+Total params: 131732 (514.58 KB)
+Trainable params: 131284 (512.83 KB)
+Non-trainable params: 448 (1.75 KB)
+_________________________________________________________________
