@@ -1,54 +1,45 @@
-# ============================
-# Nathan Herling - INFO 510 Final Project
-# Python + Micromamba + TensorFlow
-# ============================
+########################################
+# Experiment outputs / generated artifacts
+########################################
 
-# Python cache
+RRM_small_test/
+_eda_outputs/
+infer/
+
+########################################
+# Monte Carlo / evaluation scratch
+########################################
+
+_code/mc_evals/
+
+########################################
+# Model code policy
+# -----------------
+# Keep ONLY the two final sweep scripts:
+#   - sweep_model2_mk5l.py  (Sweep 1)
+#   - sweep_model2_mk5n.py  (Sweep 2)
+########################################
+
+# Ignore everything in models by default
+_code/models/*
+
+# Explicitly keep final sweep files
+!_code/models/sweep_model2_mk5l.py
+!_code/models/sweep_model2_mk5n.py
+
+########################################
+# Python cache / temporary files
+########################################
+
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
-
-# Virtual / Micromamba environments
-.venv/
-.mm/
-env/
-*.conda/
-*.mamba/
-*.env/
-
-# VS Code and editor settings
-.vscode/
-*.code-workspace
-
-# Jupyter notebooks
-.ipynb_checkpoints/
-
-# Data / outputs
-_data/temp/
 *.log
-*.csv
-*.tsv
-*.ods
-*.xlsx
-*.h5
-*.npy
-*.npz
-*.wav
-*.mp3
-*.mp4
-*.gif
-*.png
-*.jpg
-*.jpeg
+*.tmp
 
-# Model artifacts
-checkpoints/
-models/
-runs/
-outputs/
-logs/
+########################################
+# Editor / OS junk
+########################################
 
-# OS / system files
 .DS_Store
-Thumbs.db
-desktop.ini
+_docs/~*

@@ -51,6 +51,23 @@ data:
       scaler: "standard"          # "standard" | "minmax" | "none"
       impute: "mean"              # "mean" | "median" | "none"
 
+  # --- NEW FOR MODEL 3: in-memory 3-second clips + 3-sec tabular features ---
+  model3:
+    # Path to the 3-second feature CSV (one row per 3-sec clip; used by sweep_model3.py)
+    features_3sec_csv: "_data/gtzan_kaggle/Data/features_3_sec_model_3.csv"
+
+    # Mapping CSV written by make_3sec_clips_model_3.py
+    # (contains source_feature_filename + segment_path to each 3-sec PNG)
+    images_3sec_map_csv: "_data/gtzan_kaggle/Data/images_3sec_map_model_3.csv"
+
+    # Optional override; leave empty to use global data.classes
+    classes: []
+
+  # --- NEW FOR MODEL 3: default in-memory split fractions (used by sweep_model3.py) ---
+  train_frac: 0.80     # fraction of 3-sec clips used for training
+  val_frac:   0.20     # fraction of 3-sec clips used for validation
+  # (Any leftover clips, if train_frac + val_frac < 1.0, are effectively unused here.)
+
 # ==== Model Backbone ====
 model:
   backbone: "custom_small"        # CNN backbone
@@ -126,6 +143,12 @@ train:
     dir: "_eda_outputs"
     filename_best:  "model2_best.keras"
     filename_final: "model2_final.keras"
+
+  # --- NEW FOR MODEL 3: checkpoints (if you later add a non-sweep training script) ---
+  checkpoints_model3:
+    dir: "_eda_outputs"
+    filename_best:  "model3_best_model_3.keras"
+    filename_final: "model3_final_model_3.keras"
 
 # ==== Uncertainty Evaluation ====
 uncertainty:
